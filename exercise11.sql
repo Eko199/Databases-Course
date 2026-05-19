@@ -214,13 +214,58 @@ AS
 	SELECT * FROM inserted
 GO
 
+CREATE TRIGGER tr8product
+ON product
+INSTEAD OF UPDATE, DELETE
+AS
+BEGIN
+	IF UPDATE(model) 
+    BEGIN
+        RAISERROR('ERROR: You are not allowed to update the model. Update cancelled.', 16, 8)
+		RETURN
+    END
+
+	IF EXISTS(
+		SELECT *
+		FROM pc
+		JOIN ((SELECT *
+			FROM product
+			WHERE model NOT IN (SELECT model FROM deleted))
+			UNION
+			(SELECT * FROM inserted)
+		) AS p ON pc.model = p.model
+		WHERE NOT EXISTS(
+			SELECT *
+			FROM laptop l
+			JOIN ((SELECT *
+				FROM product
+				WHERE model NOT IN (SELECT model FROM deleted))
+				UNION
+				(SELECT * FROM inserted)
+			) AS p2 ON l.model = p2.model
+			WHERE p2.maker = p.maker AND l.speed >= pc.speed
+		)
+	)
+	BEGIN
+		RAISERROR('Each pc producer must have a faster laptop', 16, 9)
+		RETURN
+	END
+
+	DELETE FROM product
+	WHERE model IN (SELECT model FROM deleted)
+
+	INSERT INTO product
+	SELECT * FROM inserted
+END
+GO
+
 CREATE TRIGGER tr9
 ON laptop
 INSTEAD OF INSERT, UPDATE, DELETE
 AS
 	IF UPDATE(code) AND EXISTS(SELECT * FROM inserted) AND EXISTS(SELECT * FROM deleted)
     BEGIN
-        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 8)
+        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 10)
 		RETURN
     END
 
@@ -237,7 +282,7 @@ AS
 		HAVING AVG(price) < 2000
 	)
 	BEGIN
-		RAISERROR('Each laptop maker should have an average price at least 2000', 16, 9)
+		RAISERROR('Each laptop maker should have an average price at least 2000', 16, 11)
 		RETURN
 	END
 
@@ -255,7 +300,7 @@ AS
 BEGIN
 	IF UPDATE(code) AND EXISTS(SELECT * FROM inserted) AND EXISTS(SELECT * FROM deleted)
     BEGIN
-        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 10)
+        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 12)
 		RETURN
     END
 
@@ -270,7 +315,7 @@ BEGIN
 		WHERE l.ram > p.ram AND l.price <= p.price
 	)
 	BEGIN
-		RAISERROR('Each laptop with more memory than a pc should be more expensive than it.', 16, 11)
+		RAISERROR('Each laptop with more memory than a pc should be more expensive than it.', 16, 13)
 		RETURN
 	END
 
@@ -289,7 +334,7 @@ AS
 BEGIN
 	IF UPDATE(code) AND EXISTS(SELECT * FROM inserted) AND EXISTS(SELECT * FROM deleted)
     BEGIN
-        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 12)
+        RAISERROR('ERROR: You are not allowed to update the code. Update cancelled.', 16, 14)
 		RETURN
     END
 
@@ -304,7 +349,7 @@ BEGIN
 		WHERE l.ram > pc.ram AND l.price <= pc.price
 	)
 	BEGIN
-		RAISERROR('Each laptop with more memory than a pc should be more expensive than it.', 16, 13)
+		RAISERROR('Each laptop with more memory than a pc should be more expensive than it.', 16, 15)
 		RETURN
 	END
 
@@ -331,6 +376,7 @@ DROP TRIGGER tr6
 DROP TRIGGER tr7
 DROP TRIGGER tr8pc
 DROP TRIGGER tr8laptop
+DROP TRIGGER tr8product
 DROP TRIGGER tr9
 DROP TRIGGER tr10pc
 DROP TRIGGER tr10laptop
@@ -380,7 +426,7 @@ AS
 BEGIN
 	IF UPDATE(NAME) AND EXISTS(SELECT * FROM deleted)
 	BEGIN
-		RAISERROR('ERROR: You are not allowed to update the ship name. Update cancelled.', 16, 14)
+		RAISERROR('ERROR: You are not allowed to update the ship name. Update cancelled.', 16, 16)
 		RETURN
 	END
 
@@ -398,7 +444,7 @@ BEGIN
 		HAVING COUNT(NAME) > 2
 	)
 	BEGIN
-		RAISERROR('Classes can not have more than 2 ships!', 16, 15)
+		RAISERROR('Classes can not have more than 2 ships!', 16, 17)
 		RETURN
 	END
 
@@ -431,7 +477,7 @@ BEGIN
 			OR (c1.NUMGUNS < 9 AND c2.NUMGUNS > 9)
 	)
 	BEGIN
-		RAISERROR('A ship with more than 9 guns can not fight a ship with less than 9 guns.', 16, 16)
+		RAISERROR('A ship with more than 9 guns can not fight a ship with less than 9 guns.', 16, 18)
 		RETURN
 	END
 
@@ -447,7 +493,7 @@ AS
 BEGIN
 	IF (UPDATE(SHIP) OR UPDATE(BATTLE)) AND EXISTS(SELECT * FROM deleted)
 	BEGIN
-		RAISERROR('ERROR: You are not allowed to update the ship and battle. Update cancelled.', 16, 17)
+		RAISERROR('ERROR: You are not allowed to update the ship and battle. Update cancelled.', 16, 19)
 		RETURN	
 	END
 
@@ -472,7 +518,7 @@ BEGIN
 		WHERE osunk.RESULT = 'sunk' AND bsunk.DATE < blater.DATE
 	)
 	BEGIN
-		RAISERROR('A ship can not battle after it has been sunk.', 16, 18)
+		RAISERROR('A ship can not battle after it has been sunk.', 16, 20)
 		RETURN
 	END
 
@@ -491,7 +537,7 @@ AS
 BEGIN
 	IF UPDATE(NAME) AND EXISTS(SELECT * FROM deleted)
 	BEGIN
-		RAISERROR('ERROR: You are not allowed to update the name. Update cancelled.', 16, 19)
+		RAISERROR('ERROR: You are not allowed to update the name. Update cancelled.', 16, 21)
 		RETURN	
 	END
 
@@ -516,7 +562,7 @@ BEGIN
 		WHERE osunk.RESULT = 'sunk' AND bsunk.DATE < blater.DATE
 	)
 	BEGIN
-		RAISERROR('A ship can not battle after it has been sunk.', 16, 18)
+		RAISERROR('A ship can not battle after it has been sunk.', 16, 22)
 		RETURN
 	END
 
